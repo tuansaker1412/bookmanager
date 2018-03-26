@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Quản lý thư viện</title>
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/css/materialize.min.css">
+  
+  <!-- Scripts -->
+  <script>
+    delete module.exports
+  </script>
+  <script src="https://code.jquery.com/jquery-3.2.1.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/js/materialize.min.js"></script>
+</head>
+<body>
+  <nav>
+    <div class="nav-wrapper">
+      <a class="brand-logo center">Quản lý sách</a>   
+    </div>
+  </nav>
+  <ul class="list-book">
+  </ul>
+  
+  <!-- Modal Structure -->
+  <div id="modal1" class="modal modal-fixed-footer">
+    <form action="" method="POST" role="form">
+      <div class="modal-content">
+        <h5 class="center">Sửa sách</h5>
+        <input type="text" name="id" id="id" hidden>
+        <label>Tên sách</label>
+        <input type="text" name="name" id="name" autofocus>
+        <label>Tác giả</label>
+        <input type="text" name="author" id="author">
+        <label>Nhà xuất bản</label>
+        <input type="text" name="printer" id="printer">
+        <label>Số bản</label>
+        <input type="text" name="number" id="number">
+        <label>Mã sách</label>
+        <input type="text" name="nts" id="nts">
+      </div>
+      <div class="modal-footer">
+        <div class="center">
+          <button class="waves-effect waves-light btn" type="submit">Sửa</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  
+  <button id="page-load" hidden>Load</button>
+
+  <script>
+    (function (cbFn) {
+      cbFn(window.jQuery, window);
+    })(function cbFn($, window) {
+      $(mainWindowReaddy);
+      
+      function mainWindowReaddy() {
+        $('.modal').modal();
+        const electron = require('electron');
+        const { ipcRenderer } = electron;
+        
+        var $listBook = $('.list-book');
+        var $pageLoad = $('#page-load');
+        var $formEdit = $('form');
+        
+        $pageLoad.on('click', loaddingPage);
+        $pageLoad.trigger('click');
+        $listBook.on('click', '.btn-edit-book', editBook);
+        $listBook.on('click', '.btn-delete-book', deleteBook);
+        $formEdit.on('submit', submitForm);
+        
+        ipcRenderer.on('page:loaded', renderListBook);               
+        ipcRenderer.on('item:add', addNewBook);
+        ipcRenderer.on('book:edited', loadEditedBook);
+
+        function loadEditedBook(e, data) {
+          var $target = $(`#book-${data[0].value}`);
+          var content = `
+            <li id="book-${data[0].value}" data-id="${data[0].value}" data-name="${data[1].value}" data-author="${data[2].value}" data-printer="${data[3].value}" data-number="${data[4].value}" data-nts="${data[5].value}">
+              <div class="card">
+                <div class="card-content">
+                  <span class="card-title center">${data[1].value}</span>
+                  <p>Tác giả: ${data[2].value}</p>
+                  <p>Nhà xuất bản: ${data[3].value}</p>
+                  <p>Số lượng: ${data[4].value}</p>
+                  <p>Mã sách: ${data[5].value}</p>
+                </div>
+                <div class="card-action center">
+                  <button class="btn-edit-book waves-effect waves-light btn">Sửa</button>
+                  <button class="btn-delete-book waves-effect waves-light btn red">Xóa</button>
+                </div>
+              </div>
+            </li>`
+            $target.html(content);
+        }
+        function loaddingPage(event) {
+          ipcRenderer.send('page:load');
+        }
+
+        function renderListBook(e, data) {
+          console.log(data);
+
+          data.map(book => {
+            console.log(book);
+            const bookRow = `
+            <li style="width: 33%; display: inline-block;" id="book-${book.id}" data-id="${book.id}" data-name="${book.name}" data-author="${book.author}" data-printer="${book.printer}" data-number="${book.number}" data-nts="${book.nts}">
+              <div class="card">
+                <div class="card-content">
+                  <span class="card-title center">${book.name}</span>
+                  <p>Tác giả: ${book.author}</p>
+                  <p>Nhà xuất bản: ${book.printer}</p>
+                  <p>Số lượng: ${book.number}</p>
+                  <p>Mã sách: ${book.nts}</p>
+                </div>
+                <div class="card-action center">
+                  <button class="btn-edit-book waves-effect waves-light btn">Sửa</button>
+                  <button class="btn-delete-book waves-effect waves-light btn red">Xóa</button>
+                </div>
+              </div>
+            </li>
+            `;
+            $listBook.append(bookRow);
+          })
+          $pageLoad.hide();
+        }
+        
+        function editBook(event) {
+          var btnEdit = $(event.currentTarget);
+          var id = btnEdit.closest('li').data('id');
+          var name = btnEdit.closest('li').data('name');
+          var author = btnEdit.closest('li').data('author');
+          var printer = btnEdit.closest('li').data('printer');
+          var number = btnEdit.closest('li').data('number');
+          var nts = btnEdit.closest('li').data('nts');
+
+          $('input[name="id"]').val(id);
+          $('input[name="name"]').val(name);
+          $('input[name="author"]').val(author);
+          $('input[name="printer"]').val(printer);
+          $('input[name="number"]').val(number);
+          $('input[name="nts"]').val(nts);
+          $('.modal').modal('open');
+        }
+
+        function submitForm(event) {
+          event.preventDefault();
+
+          var formData = $formEdit.serializeArray();
+          $('.modal').modal('close');
+          ipcRenderer.send('book:edit', formData);
+        }
+        function deleteBook(event) {
+          var btnEdit = $(event.currentTarget);
+          var bookDetail = btnEdit.closest('li');
+          var idBook = bookDetail.data('id');
+          ipcRenderer.send('book:delete', idBook);
+          bookDetail.fadeOut('slow');
+        }
+        function addNewBook(e, data) {
+          const bookRow = `
+          <li style="width: 33%; display: inline-block;" id="book-${data[5].value}" data-id="${data[5].value}" data-name="${data[0].value}" data-author="${data[1].value}" data-printer="${data[2].value}" data-number="${data[3].value}" data-nts="${data[4].value}">
+            <div class="card">
+              <div class="card-content">
+                <span class="card-title center">${data[0].value}</span>
+                <p>Tác giả: ${data[1].value}</p>
+                <p>Nhà xuất bản: ${data[2].value}</p>
+                <p>Số lượng: ${data[3].value}</p>
+                <p>Mã sách: ${data[4].value}</p>
+              </div>
+              <div class="card-action center">
+                <button class="btn-edit-book waves-effect waves-light btn">Sửa</button>
+                <button class="btn-delete-book waves-effect waves-light btn red">Xóa</button>
+              </div>
+            </div>
+          </li>
+          `;
+          $listBook.append(bookRow);
+        }
+      }
+    })
+  </script>
+</body>
+</html>

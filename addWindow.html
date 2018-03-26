@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Thêm sách</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css">
+</head>
+<body>
+  <div class="container">
+    <form action="" method="POST" role="form">
+      <div>
+        <br>
+        <label>Tên sách</label>
+        <input type="text" name="name" id="name" autofocus>
+        <label>Tác giả</label>
+        <input type="text" name="author" id="author">
+        <label>Nhà xuất bản</label>
+        <input type="text" name="printer" id="printer">
+        <label>Số bản</label>
+        <input type="text" name="number" id="number">
+        <label>Mã sách</label>
+        <input type="text" name="nts" id="nts">
+      </div>
+      <button class="waves-effect waves-light btn" type="submit">Thêm</button>
+    </form>
+  </div>
+  <script>
+    window.jQuery = require('jquery');
+  </script>
+  <script>
+    (function (cbFn) {
+      cbFn(window.jQuery, window)
+    })(function cbFn($, window) {
+      $(pageReady);
+      
+      function pageReady() {
+        const electron = require('electron');
+        const { ipcRenderer } = electron;
+        var $formAdd = $('form');
+
+        $formAdd.on('submit', submitForm);
+
+        function submitForm(e) {
+          e.preventDefault();
+          var formData = $formAdd.serializeArray();
+          console.log(formData);
+
+          // var item = document.querySelector('#name').value;
+          // console.log(item);
+          ipcRenderer.send('item:add', formData);
+        }
+      }
+    })
+  </script>
+</body>
+</html>
